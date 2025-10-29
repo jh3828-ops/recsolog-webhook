@@ -1,0 +1,7 @@
+Flask
+SQLAlchemy
+pyodbc
+python-dotenv
+pandas
+requests
+openpyxl

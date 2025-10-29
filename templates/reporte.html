@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte de Cumplimiento</title>
+    <!-- Carga de Tailwind CSS para un diseño moderno y responsive -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilos base si se necesitan, aunque Tailwind maneja casi todo */
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+
+    <div class="container mx-auto p-4 sm:p-8">
+        <header class="mb-8 flex justify-between items-center">
+            <h1 class="text-4xl font-extrabold text-green-700 tracking-tight">
+                Reporte Histórico de Cumplimiento 📊
+            </h1>
+            <a href="{{ url_for('index') }}" 
+               class="py-2 px-4 border border-transparent rounded-lg shadow-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition duration-150">
+                ← Volver al Dashboard
+            </a>
+        </header>
+
+        <!-- Sección de Estadísticas Clave -->
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            
+            <!-- Tarjeta 1: Tasa de Cumplimiento -->
+            <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-green-500">
+                <p class="text-sm font-medium text-gray-500">Tasa de Cumplimiento</p>
+                <p class="text-3xl font-bold mt-1 text-green-700">
+                    {{ stats.tasa_cumplimiento }}%
+                </p>
+                <p class="text-xs text-gray-400 mt-1">Total Enviadas: {{ stats.total_enviadas }}</p>
+            </div>
+
+            <!-- Tarjeta 2: Cumple (A tiempo) -->
+            <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-blue-500">
+                <p class="text-sm font-medium text-gray-500">Total Cumplimiento</p>
+                <p class="text-3xl font-bold mt-1 text-blue-700">
+                    {{ stats.total_cumple }}
+                </p>
+                <p class="text-xs text-gray-400 mt-1">Facturas enviadas a tiempo.</p>
+            </div>
+
+            <!-- Tarjeta 3: No Cumple (Tardanza) -->
+            <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-red-500">
+                <p class="text-sm font-medium text-gray-500">Total No Cumple</p>
+                <p class="text-3xl font-bold mt-1 text-red-700">
+                    {{ stats.total_no_cumple }}
+                </p>
+                <p class="text-xs text-gray-400 mt-1">Facturas enviadas con tardanza.</p>
+            </div>
+
+        </section>
+
+        <!-- Sección de Tabla Histórica (Solo Enviadas) -->
+        <section class="bg-white p-6 rounded-xl shadow-lg">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4 border-b pb-2">
+                Historial de Facturas Enviadas
+            </h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Folio Fiscal (B)</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mesa (C)</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hora Límite (H)</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hora Envío (K)</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Resultado (M)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for factura in facturas %}
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                    {{ factura.folio_fiscal }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {{ factura.mesa }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <!-- Mostramos solo la hora (HH:MM:SS) -->
+                                    {{ factura.hora_limite.split(' ')[1] if factura.hora_limite else 'N/A' }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <!-- Fecha y Hora de envío -->
+                                    {{ factura.fecha_envio_cfdi }} @ {{ factura.hora_envio_cfdi }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold 
+                                    {% if 'Cumple' in factura.cumplimiento_tiempo %}text-green-700
+                                    {% else %}text-red-700{% endif %}">
+                                    {{ factura.cumplimiento_tiempo }}
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">
+                                    Aún no hay facturas marcadas como enviadas para generar el reporte.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Pie de página simple -->
+        <footer class="mt-10 text-center text-gray-500 text-sm">
+            Sistema desarrollado en Python (Flask) y SQLite.
+        </footer>
+    </div>
+    
+</body>
+</html>

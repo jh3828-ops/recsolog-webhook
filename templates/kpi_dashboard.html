@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Indicadores de Desempeño - Planner</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #f7f9fb; }
+    .pulse { animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.8;transform:scale(1.05);} }
+  </style>
+</head>
+<body class="p-8">
+  <div class="max-w-6xl mx-auto">
+    <!-- Encabezado -->
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-3xl font-extrabold text-indigo-700">📊 Indicadores de Desempeño</h1>
+      <a href="{{ url_for('planner_view') }}"
+         class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl text-gray-700 bg-white hover:bg-gray-50 shadow-md transition">
+         ← Regresar al Planner
+      </a>
+    </div>
+
+    <!-- Eficiencia Global -->
+    <div class="bg-white shadow-md rounded-2xl mb-8 text-center p-6 border-t-4 border-indigo-600">
+      <h3 class="text-gray-500 text-sm font-medium mb-1">Eficiencia Global</h3>
+      <p id="eficienciaGlobal"
+         class="text-5xl font-extrabold 
+         {% if eficiencia >= 90 %}text-green-600{% elif eficiencia >= 70 %}text-yellow-500{% else %}text-red-600{% endif %}
+         pulse">{{ eficiencia }}%</p>
+      <p class="text-sm text-gray-500">Pedidos cumplidos respecto al total</p>
+    </div>
+
+    <!-- KPIs -->
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
+      <div class="bg-white shadow-md rounded-2xl p-4 text-center border-t-4 border-indigo-500">
+        <h3 class="text-gray-500 text-sm font-medium">Total Pedidos</h3>
+        <p id="kpiTotal" class="text-3xl font-bold text-indigo-700 mt-1">{{ total }}</p>
+      </div>
+      <div class="bg-white shadow-md rounded-2xl p-4 text-center border-t-4 border-green-500">
+        <h3 class="text-gray-500 text-sm font-medium">Cumplen</h3>
+        <p id="kpiCumplen" class="text-3xl font-bold text-green-600 mt-1">{{ cumplen }}</p>
+      </div>
+      <div class="bg-white shadow-md rounded-2xl p-4 text-center border-t-4 border-red-500">
+        <h3 class="text-gray-500 text-sm font-medium">No Cumplen</h3>
+        <p id="kpiNoCumplen" class="text-3xl font-bold text-red-600 mt-1">{{ no_cumplen }}</p>
+      </div>
+      <div class="bg-white shadow-md rounded-2xl p-4 text-center border-t-4 border-yellow-400">
+        <h3 class="text-gray-500 text-sm font-medium">Pendientes</h3>
+        <p id="kpiPendientes" class="text-3xl font-bold text-yellow-500 mt-1">{{ pendientes }}</p>
+      </div>
+    </div>
+
+    <!-- Gráfica -->
+    <div class="bg-white shadow-md rounded-2xl p-6">
+      <div class="flex justify-between items-center mb-2">
+        <h3 class="text-lg font-semibold text-gray-700">Eficiencia Semanal</h3>
+        <span id="lastUpdate" class="text-sm text-gray-400">Última actualización: {{ datetime.utcnow().strftime('%H:%M:%S') }}</span>
+      </div>
+      <canvas id="graficaEficiencia" height="120"></canvas>
+    </div>
+  </div>
+
+  <script>
+    const ctx = document.getElementById('graficaEficiencia').getContext('2d');
+    let chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"],
+        datasets: [{
+          label: 'Eficiencia (%)',
+          data: [70, 75, 80, 85, 88, 90, {{ eficiencia }}],
+          fill: true,
+          borderColor: '#4f46e5',
+          backgroundColor: 'rgba(79,70,229,0.1)',
+          tension: 0.3
+        }]
+      },
+      options: {
+        scales: {
+          y: { min: 0, max: 100, ticks: { callback: v => v + "%" } }
+        }
+      }
+    });
+
+    // --- Función de actualización en vivo ---
+    async function actualizarKPIs() {
+      try {
+        const resp = await fetch("{{ url_for('kpi_view') }}?ajax=1");
+        const data = await resp.json();
+        document.getElementById('kpiTotal').textContent = data.total;
+        document.getElementById('kpiCumplen').textContent = data.cumplen;
+        document.getElementById('kpiNoCumplen').textContent = data.no_cumplen;
+        document.getElementById('kpiPendientes').textContent = data.pendientes;
+        document.getElementById('eficienciaGlobal').textContent = data.eficiencia + "%";
+        document.getElementById('lastUpdate').textContent = "Última actualización: " + new Date().toLocaleTimeString('es-MX', {hour12: false});
+
+        // actualizar gráfica
+        chart.data.datasets[0].data[6] = data.eficiencia;
+        chart.update();
+      } catch (err) {
+        console.error("Error al actualizar KPIs:", err);
+      }
+    }
+
+    // Actualizar cada 60 segundos
+    setInterval(actualizarKPIs, 60000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Planner — Recsolog</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        body {
+            background-color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+        }
+        .tabla {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        .tabla th, .tabla td {
+            padding: 10px;
+            text-align: left;
+        }
+        .tabla th {
+            background-color: #2563eb;
+            color: white;
+        }
+        .tabla tr:nth-child(even) {
+            background-color: #f1f5f9;
+        }
+        .tabla tr:hover {
+            background-color: #e2e8f0;
+        }
+        .btn {
+            background-color: #2563eb;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s;
+            font-size: 0.875rem;
+        }
+        .btn:hover {
+            background-color: #1e40af;
+        }
+        input[type="date"] {
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 6px 10px;
+            outline: none;
+        }
+        input[type="date"]:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 1px #2563eb;
+        }
+        .cumple {
+            background-color: #dcfce7;
+        }
+        .no-cumple {
+            background-color: #fee2e2;
+        }
+    </style>
+</head>
+<body class="p-6">
+
+    <!-- Encabezado -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 space-y-4 md:space-y-0">
+        <h1 class="text-2xl font-bold text-gray-800">
+            🧾 Dashboard del Planner — Control de Facturación
+        </h1>
+
+        <div class="flex justify-end mb-4">
+    <a href="{{ url_for('exportar_excel') }}" 
+       class="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow hover:bg-indigo-700 transition">
+       📊 Exportar KPI a Excel
+    </a>
+</div>
+
+            <!-- Botón Actualizar manual -->
+            <button onclick="recargar()" 
+                    class="btn flex items-center space-x-2 bg-green-600 hover:bg-green-700">
+                <svg xmlns="http://www.w3.org/2000/svg" 
+                     class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" 
+                     stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                          d="M4 4v6h6M20 20v-6h-6M4 14h16M10 10L4 4m10 10l6 6"/>
+                </svg>
+                <span>Actualizar</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Filtro de fechas -->
+    <form method="get" action="/planner" class="mb-6 bg-white shadow-md rounded-lg p-4 flex flex-wrap items-center gap-4">
+        <div class="flex flex-col">
+            <label for="fecha_inicio" class="text-sm font-medium text-gray-700">Fecha inicio</label>
+            <input type="date" id="fecha_inicio" name="fecha_inicio" 
+                   value="{{ fecha_inicio or '' }}">
+        </div>
+        <div class="flex flex-col">
+            <label for="fecha_fin" class="text-sm font-medium text-gray-700">Fecha fin</label>
+            <input type="date" id="fecha_fin" name="fecha_fin" 
+                   value="{{ fecha_fin or '' }}">
+        </div>
+
+        <div class="flex items-end gap-3">
+            <button type="submit" class="btn bg-blue-600 hover:bg-blue-700 flex items-center space-x-2">
+                <svg xmlns="http://www.w3.org/2000/svg" 
+                     class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" 
+                     stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                          d="M10 6H6v12h12V6h-4m-4 0V4h4v2"/>
+                </svg>
+                <span>Filtrar</span>
+            </button>
+
+            <button type="button" onclick="setHoy()" 
+                    class="btn bg-indigo-600 hover:bg-indigo-700 flex items-center space-x-2">
+                <svg xmlns="http://www.w3.org/2000/svg" 
+                     class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" 
+                     stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span>Hoy</span>
+            </button>
+        </div>
+    </form>
+
+    <!-- Tabla de pedidos -->
+    <div class="overflow-x-auto shadow-md rounded-lg bg-white p-4">
+        <table class="tabla">
+            <thead>
+                <tr>
+                    <th>Pedido</th>
+                    <th>Fecha Solicitada</th>
+                    <th>Hora Límite</th>
+                    <th>Fecha Entregada</th>
+                    <th>Cumplimiento</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+   <tbody id="tabla-facturas">
+    {% if facturas %}
+        {% for factura in facturas %}
+        <tr data-pedido="{{ factura.pedido }}" class="text-center hover:bg-gray-100">
+            <td class="py-2 px-4 border-b">{{ factura.pedido }}</td>
+            <td class="py-2 px-4 border-b fecha-solicitada">{{ factura.fecha_solicitada or '-' }}</td>
+            <td class="py-2 px-4 border-b hora-limite">{{ factura.hora_limite or '-' }}</td>
+            <td class="py-2 px-4 border-b fecha-entregada">{{ factura.fecha_entregada or '-' }}</td>
+            <td class="py-2 px-4 border-b cumplimiento">{{ factura.cumplimiento or 'Pendiente' }}</td>
+            <td class="py-2 px-4 border-b">
+                <button class="btn-solicitada bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1 px-3 rounded">
+                    Solicitada
+                </button>
+                <button class="btn-entregada bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded ml-2">
+                    Impresa/Entregada
+                </button>
+            </td>
+        </tr>
+        {% endfor %}
+    {% else %}
+        <tr>
+            <td colspan="6" class="text-center text-gray-500 py-4">No hay pedidos disponibles para mostrar.</td>
+        </tr>
+    {% endif %}
+</tbody>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    // Acción para botón "Solicitada"
+    document.querySelectorAll(".btn-solicitada").forEach(btn => {
+        btn.addEventListener("click", async (e) => {
+            const row = e.target.closest("tr");
+            const pedido = row.dataset.pedido;
+
+            const res = await fetch(`/actualizar_solicitada/${pedido}`, { method: "POST" });
+            const data = await res.json();
+
+            if (data.status === "success") {
+                row.querySelector(".fecha-solicitada").textContent = data.fecha_solicitada;
+                row.querySelector(".hora-limite").textContent = data.hora_limite;
+                alert(`✅ Pedido ${pedido} marcado como SOLICITADO.`);
+            } else {
+                alert("❌ Error al actualizar pedido.");
+            }
+        });
+    });
+
+    // Acción para botón "Impresa/Entregada"
+    document.querySelectorAll(".btn-entregada").forEach(btn => {
+        btn.addEventListener("click", async (e) => {
+            const row = e.target.closest("tr");
+            const pedido = row.dataset.pedido;
+
+            const res = await fetch(`/actualizar_entregada/${pedido}`, { method: "POST" });
+            const data = await res.json();
+
+            if (data.status === "success") {
+                row.querySelector(".fecha-entregada").textContent = data.fecha_entregada;
+                row.querySelector(".cumplimiento").textContent = data.cumplimiento;
+                if (data.cumple === false) row.style.backgroundColor = "#ffb3b3";
+                alert(`📦 Pedido ${pedido} marcado como ENTREGADO.`);
+            } else {
+                alert("❌ Error al actualizar pedido.");
+            }
+        });
+    });
+});
+</script>
+
+
+        </table>
+    </div>
+
+    <!-- Script JS -->
+    <script>
+        // Autoactualización cada 1 minuto (conserva filtros)
+        function recargar() {
+            const params = new URLSearchParams(window.location.search);
+            window.location.href = `/planner?${params.toString()}`;
+        }
+        setInterval(recargar, 60000);
+
+        function setHoy() {
+            const hoy = new Date().toISOString().split("T")[0];
+            document.getElementById("fecha_inicio").value = hoy;
+            document.getElementById("fecha_fin").value = hoy;
+            document.querySelector("form").submit();
+        }
+
+        // Función para registrar acciones por AJAX
+        async function marcarSolicitada(pedido) {
+            await fetch(`/api/solicitada/${pedido}`, { method: "POST" });
+            recargar();
+        }
+
+        async function marcarEntregada(pedido) {
+            await fetch(`/api/entregada/${pedido}`, { method: "POST" });
+            recargar();
+        }
+    </script>
+
+</body>
+</html>

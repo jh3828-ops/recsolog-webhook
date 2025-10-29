@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Módulo Empacador</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f7f9fb; }
+        .semaphore-red { background-color: #f87171; }
+        .semaphore-yellow { background-color: #facc15; }
+        .semaphore-green { background-color: #4ade80; }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+
+    <!-- Script para la auto-desaparición de mensajes Flash -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const messagesContainer = document.getElementById('flash-messages');
+            if (messagesContainer) {
+                const messages = messagesContainer.querySelectorAll('[role="alert"]');
+                
+                messages.forEach(msg => {
+                    msg.classList.remove('opacity-0');
+                    msg.classList.add('opacity-100');
+                });
+                
+                setTimeout(() => {
+                    messages.forEach(msg => {
+                        msg.classList.remove('opacity-100');
+                        msg.classList.add('opacity-0');
+                    });
+                    
+                    setTimeout(() => {
+                        messagesContainer.remove();
+                    }, 300); 
+                }, 5000); 
+            }
+        });
+    </script>
+
+    <!-- Contenedor de Mensajes Flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div id="flash-messages" class="fixed top-4 right-4 z-50 space-y-2">
+                {% for category, message in messages %}
+                    {% set bg_color = 'bg-green-600' if category == 'success' else 'bg-red-600' %}
+                    <div class="p-4 rounded-xl shadow-2xl text-white opacity-0 transition-opacity duration-300 {{ bg_color }}" role="alert" style="min-width: 300px;">
+                        <div class="flex items-center">
+                            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <span>{{ message }}</span>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="max-w-7xl mx-auto">
+        
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-extrabold text-green-700">Módulo Empacador</h1>
+            
+            <!-- Botón para Regresar a la Principal -->
+            <a href="{{ url_for('index') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl text-gray-700 bg-white hover:bg-gray-50 shadow-md transition duration-150">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"></path></svg>
+                Regresar a la Principal
+            </a>
+        </div>
+        
+        <!-- Formulario de Registro de Facturas -->
+        <div class="bg-white p-6 rounded-2xl shadow-lg mb-8">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Registrar Nueva Solicitud (Empacador)</h2>
+            <form action="{{ url_for('agregar_factura') }}" method="POST" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                
+                <div>
+                    <label for="folio_fiscal" class="block text-sm font-medium text-gray-700">Folio Fiscal (A)</label>
+                    <input type="text" name="folio_fiscal" id="folio_fiscal" required
+                           class="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm p-2.5 uppercase" 
+                           placeholder="Ingresar Folio">
+                </div>
+
+                <div>
+                    <label for="mesa" class="block text-sm font-medium text-gray-700">Mesa (B)</label>
+                    <select name="mesa" id="mesa" required
+                            class="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm p-2.5">
+                        <option value="mesa1">Mesa 1</option>
+                        <option value="mesa2">Mesa 2</option>
+                        <option value="mesa3">Mesa 3</option>
+                        <option value="mesa3">Mesa 4</option>
+                        <option value="mesa3">Mesa 5</option>
+                        <option value="mesa3">Mesa 6</option>
+                        <option value="mesa3">Mesa 7</option>
+                        <option value="mesa3">Mesa 8</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="urgente" class="block text-sm font-medium text-gray-700">Urgente (C)</label>
+                    <select name="urgente" id="urgente" required
+                            class="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm p-2.5">
+                        <option value="No">No</option>
+                        <option value="Sí">Sí</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="w-full justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150">
+                    Registrar Solicitud
+                </button>
+            </form>
+        </div>
+
+        <!-- Tabla de Facturas (Solo Lectura) -->
+        <div class="bg-white p-6 rounded-2xl shadow-lg overflow-x-auto">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Historial de Solicitudes (Solo Lectura)</h2>
+            
+            {% if facturas %}
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Folio</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mesa</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Urgente</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Solicitud (A/E)</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Límite (H)</th>
+                        <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                        <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Semáforo</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for factura in facturas %}
+                    <tr class="hover:bg-gray-50">
+                        <!-- Columna: Folio Fiscal (A) -->
+                        <td class="px-3 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {{ factura.folio_fiscal }}
+                        </td>
+                        
+                        <!-- Columna: Mesa -->
+                        <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-500">
+                            {{ factura.mesa.upper() }}
+                        </td>
+
+                        <!-- Columna: Urgente (Col C) -->
+                        <td class="px-3 py-3 whitespace-nowrap text-sm font-semibold 
+                            {% if factura.urgente == 'Sí' %}text-red-600{% else %}text-gray-500{% endif %}">
+                            {{ factura.urgente }}
+                        </td>
+
+                        <!-- Columna: Fecha y Hora de Solicitud (A/E) -->
+                        <td class="px-3 py-3 whitespace-nowrap text-xs text-gray-500">
+                            {{ factura.fecha_ingreso.split(' ')[0] if factura.fecha_ingreso else '' }}<br>{{ factura.fecha_ingreso.split(' ')[1] if factura.fecha_ingreso else '' }}
+                        </td>
+
+                        <!-- Columna: Hora Límite (H) -->
+                        <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-700 font-medium">
+                            {{ factura.hora_limite.split(' ')[1] if factura.hora_limite else 'N/A' }}
+                        </td>
+
+                        <!-- Columna: Estado de Envío (I) -->
+                        <td class="px-3 py-3 whitespace-nowrap text-center text-sm">
+                            {% if factura.estado_envio == 'Enviada' %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                    Enviada
+                                </span>
+                            {% else %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                    Pendiente
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Columna: Semáforo (G) -->
+                        <td class="px-3 py-3 whitespace-nowrap text-center">
+                            {% set color_class = 'semaphore-red' if factura.time_status == 'rojo' else ('semaphore-yellow' if factura.time_status == 'amarillo' else 'semaphore-green') %}
+                            <div class="h-6 w-6 mx-auto rounded-full shadow-inner {{ color_class }}"></div>
+                        </td>
+
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+                <p class="text-center text-gray-500 py-10">No hay solicitudes de facturas registradas.</p>
+            {% endif %}
+
+        </div>
+    </div>
+</body>
+</html>

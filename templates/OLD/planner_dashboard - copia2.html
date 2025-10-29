@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Módulo Planner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f7f9fb; }
+        .semaphore-red { background-color: #f87171; }
+        .semaphore-yellow { background-color: #facc15; }
+        .semaphore-green { background-color: #4ade80; }
+        .comment-input:focus { box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.4); }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+
+    <!-- Script para la auto-desaparición de mensajes Flash -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const messagesContainer = document.getElementById('flash-messages');
+            if (messagesContainer) {
+                const messages = messagesContainer.querySelectorAll('[role="alert"]');
+                
+                messages.forEach(msg => {
+                    msg.classList.remove('opacity-0');
+                    msg.classList.add('opacity-100');
+                });
+                
+                setTimeout(() => {
+                    messages.forEach(msg => {
+                        msg.classList.remove('opacity-100');
+                        msg.classList.add('opacity-0');
+                    });
+                    
+                    setTimeout(() => {
+                        messagesContainer.remove();
+                    }, 300); 
+                }, 5000); 
+            }
+        });
+    </script>
+    
+    <!-- Script para guardar comentarios vía AJAX -->
+    <script>
+        function saveComment(facturaId) {
+            const input = document.getElementById(`comment-${facturaId}`);
+            const comentario = input.value;
+            const statusIndicator = document.getElementById(`status-${facturaId}`);
+
+            statusIndicator.innerHTML = 'Guardando...';
+            statusIndicator.classList.remove('text-green-600', 'text-red-600');
+            statusIndicator.classList.add('text-yellow-600');
+
+            fetch(`{{ url_for('guardar_comentario', factura_id=0) }}`.replace('/0', '/' + facturaId), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ comentario: comentario })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    statusIndicator.innerHTML = 'Guardado';
+                    statusIndicator.classList.remove('text-yellow-600');
+                    statusIndicator.classList.add('text-green-600');
+                } else {
+                    statusIndicator.innerHTML = 'Error al guardar';
+                    statusIndicator.classList.remove('text-yellow-600');
+                    statusIndicator.classList.add('text-red-600');
+                    console.error(data.message);
+                }
+            })
+            .catch(error => {
+                statusIndicator.innerHTML = 'Error de conexión';
+                statusIndicator.classList.remove('text-yellow-600');
+                statusIndicator.classList.add('text-red-600');
+                console.error('Error:', error);
+            });
+            
+            setTimeout(() => {
+                statusIndicator.innerHTML = '';
+            }, 3000);
+        }
+    </script>
+
+    <!-- Contenedor de Mensajes Flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div id="flash-messages" class="fixed top-4 right-4 z-50 space-y-2">
+                {% for category, message in messages %}
+                    {% set bg_color = 'bg-green-600' if category == 'success' else 'bg-red-600' %}
+                    <div class="p-4 rounded-xl shadow-2xl text-white opacity-0 transition-opacity duration-300 {{ bg_color }}" role="alert" style="min-width: 300px;">
+                        <div class="flex items-center">
+                            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <span>{{ message }}</span>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="max-w-7xl mx-auto">
+        
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-extrabold text-indigo-700">Módulo Planner (CFDI)</h1>
+            
+            <!-- Botones de Acción Global -->
+            <div class="space-x-4 flex items-center">
+                <!-- Botón de Regreso a la Principal -->
+                <a href="{{ url_for('index') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl text-gray-700 bg-white hover:bg-gray-50 shadow-md transition duration-150">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"></path></svg>
+                    Regresar a la Principal
+                </a>
+                
+                <!-- Botón de Descargar Reporte (De la página principal) -->
+                <a href="{{ url_for('exportar_excel') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    Descargar Reporte Global
+                </a>
+            </div>
+        </div>
+
+        <!-- Filtros y Búsqueda -->
+        <div class="bg-white p-6 rounded-2xl shadow-lg mb-8">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Filtrar Solicitudes</h2>
+            <form action="{{ url_for('planner_view') }}" method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                
+                <div>
+                    <label for="search" class="block text-sm font-medium text-gray-700">Buscar Folio Fiscal</label>
+                    <input type="text" name="search" id="search" value="{{ current_search }}"
+                           class="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5" 
+                           placeholder="Ingresar Folio">
+                </div>
+
+                <div>
+                    <label for="estado" class="block text-sm font-medium text-gray-700">Estado de Envío (I/J)</label>
+                    <select name="estado" id="estado" class="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5">
+                        <option value="todos" {% if current_estado == 'todos' %}selected{% endif %}>Todos</option>
+                        {% for estado in filter_options.estados %}
+                            <option value="{{ estado }}" {% if current_estado == estado %}selected{% endif %}>{{ estado }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="mesa" class="block text-sm font-medium text-gray-700">Mesa (B)</label>
+                    <select name="mesa" id="mesa" class="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5">
+                        <option value="todos" {% if current_mesa == 'todos' %}selected{% endif %}>Todas</option>
+                        {% for mesa in filter_options.mesas %}
+                            <option value="{{ mesa }}" {% if current_mesa == mesa %}selected{% endif %}>{{ mesa.upper() }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="flex space-x-2">
+                    <button type="submit" class="w-full justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 transition duration-150">
+                        Aplicar Filtros
+                    </button>
+                    <a href="{{ url_for('planner_view') }}" class="w-full justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition duration-150">
+                        Reset
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Tabla Principal de Gestión -->
+        <div class="bg-white p-6 rounded-2xl shadow-lg overflow-x-auto">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Detalle y Gestión de Facturas</h2>
+            
+            {% if facturas %}
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Folio</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mesa / Urgente</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Solicitud (A/E)</th>
+                        <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Límite (H) / Semáforo (G)</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aprob. Solicitante (F)</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comentarios (L)</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entrega (I/J) / Cumplimiento (M)</th>
+                        <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for factura in facturas %}
+                    <tr class="hover:bg-gray-50">
+                        
+                        <!-- Columna: Folio Fiscal -->
+                        <td class="px-3 py-3 whitespace-nowrap text-sm font-bold text-indigo-700">
+                            {{ factura.folio_fiscal }}
+                        </td>
+                        
+                        <!-- Columna: Mesa / Urgente (B/C) -->
+                        <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-700">
+                            {{ factura.mesa.upper() }} <br>
+                            <span class="font-semibold text-xs {% if factura.urgente == 'Sí' %}text-red-600{% else %}text-gray-500{% endif %}">
+                                Urgente: {{ factura.urgente }}
+                            </span>
+                        </td>
+
+                        <!-- Columna: Fecha y Hora de Solicitud (A/E) -->
+                        <td class="px-3 py-3 text-xs text-gray-500">
+                            {{ factura.fecha_solicitud }}<br>
+                            <span class="font-medium text-gray-700">{{ factura.hora_solicitud }}</span>
+                        </td>
+                        
+                        <!-- Columna: Hora Límite (H) / Semáforo (G) -->
+                        <td class="px-3 py-3 whitespace-nowrap text-center">
+                            <span class="text-sm font-medium text-gray-800">{{ factura.hora_limite.split(' ')[1] if factura.hora_limite else 'N/A' }}</span>
+                            <div class="flex justify-center mt-1">
+                                {% set color_class = 'semaphore-red' if factura.time_status == 'rojo' else ('semaphore-yellow' if factura.time_status == 'amarillo' else 'semaphore-green') %}
+                                <div class="h-5 w-5 rounded-full shadow-inner {{ color_class }}"></div>
+                            </div>
+                        </td>
+
+                        <!-- Columna: Aprobación Solicitante (F) -->
+                        <td class="px-3 py-3 whitespace-nowrap text-center text-sm">
+                            {% if factura.aprobacion_solicitante == 'Aprobado' %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                    Aprobado
+                                </span>
+                            {% else %}
+                                <form method="POST" action="{{ url_for('aprobar_solicitud', factura_id=factura.id) }}">
+                                    <button type="submit" class="px-2 py-1 text-xs font-medium rounded-md text-white bg-blue-500 hover:bg-blue-600 transition">
+                                        Aprobar (F)
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </td>
+
+                        <!-- Columna: Comentarios (L) -->
+                        <td class="px-3 py-3">
+                            <input type="text" id="comment-{{ factura.id }}" 
+                                   value="{{ factura.comentarios or '' }}" 
+                                   onblur="saveComment({{ factura.id }})"
+                                   class="comment-input w-full p-1 border border-gray-300 rounded-lg text-sm transition focus:ring-2 focus:ring-green-500">
+                            <div id="status-{{ factura.id }}" class="text-xs mt-1 h-3"></div>
+                        </td>
+
+                        <!-- Columna: Entrega (I/J) / Cumplimiento (M) -->
+                        <td class="px-3 py-3 text-xs">
+                            {% if factura.estado_envio == 'Enviada' %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                    Enviada
+                                </span>
+                                <br>
+                                <span class="text-gray-500">Entrega: {{ factura.fecha_envio.split(' ')[1] if factura.fecha_envio else 'N/A' }}</span>
+                                <p class="text-xs font-semibold mt-1 {% if 'No Cumple' in factura.cumplimiento_tiempo %}text-red-600{% else %}text-green-600{% endif %}">{{ factura.cumplimiento_tiempo }}</p>
+                            {% else %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                    Pendiente
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Columna: Acciones -->
+                        <td class="px-3 py-3 whitespace-nowrap text-center">
+                            {% if factura.estado_envio == 'Pendiente' %}
+                                <form method="POST" action="{{ url_for('enviar_cfdi', factura_id=factura.id) }}" class="inline">
+                                    <button type="submit" class="px-3 py-1 text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition">
+                                        Enviar CFDI (I)
+                                    </button>
+                                </form>
+                            {% else %}
+                                <span class="text-gray-400 text-sm">Completado</span>
+                            {% endif %}
+                        </td>
+
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+                <p class="text-center text-gray-500 py-10">No se encontraron solicitudes con los filtros aplicados.</p>
+            {% endif %}
+
+        </div>
+    </div>
+</body>
+</html>
