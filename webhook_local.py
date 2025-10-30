@@ -3,10 +3,10 @@ import os
 
 app = Flask(__name__)
 
-# ✅ Ruta raíz para confirmar que el servicio está en línea
 @app.route("/", methods=["GET"])
 def home():
     return "✅ Webhook Recsolog activo y escuchando correctamente.", 200
+
 
 
 # ✅ Ruta GET para verificación de Webhook con Meta (Facebook)
