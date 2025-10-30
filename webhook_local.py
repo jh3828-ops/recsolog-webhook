@@ -3,6 +3,8 @@ import os
 
 app = Flask(__name__)
 
+print("🚀 Iniciando archivo webhook_local.py en Render...")
+
 @app.route("/", methods=["GET"])
 def home():
     return "✅ Webhook Recsolog activo y escuchando correctamente.", 200
